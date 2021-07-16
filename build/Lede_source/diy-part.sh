@@ -18,7 +18,7 @@ uci set system.@system[0].hostname='OpenWrt'                                # �
 EOF
 
 # 版本号里显示一个自己的名字（MCydia build $(TZ=UTC-8 date "+%Y.%m.%d") @ 这些都是后增加的）
-sed -i "直男抄袭于 $(TZ=UTC-8 date "+%Y.%m.%d") 的 @ OpenWrt /g" $ZZZ 版本
+sed -i "s/OpenWrt /${Author} Compiled in $(TZ=UTC-8 date "+%Y.%m.%d") @ OpenWrt /g" $ZZZ
 
 # 关闭IPv6 分配长度
 sed -i '/ip6assign/d' package/base-files/files/bin/config_generate
