@@ -26,9 +26,8 @@ Compte=$(date +%Y年%m月%d号%H时%M分)
 # LEDE源码通用diy.sh文件
 ################################################################################################################
 Diy_lede() {
-find . -name 'luci-app-netdata' -o -name 'netdata' -o -name 'luci-theme-argon' | xargs -i rm -rf {}
+find . -name 'luci-app-netdata' -o -name 'netdata' -o -name 'luci-theme-argon' -o -name 'mentohust' | xargs -i rm -rf {}
 find . -name 'luci-app-ipsec-vpnd' -o -name 'k3screenctrl' -o -name 'luci-app-fileassistant' | xargs -i rm -rf {}
-find . -name 'luci-theme-netgear' | xargs -i rm -rf {}
 
 sed -i '/to-ports 53/d' $ZZZ
 
@@ -39,8 +38,7 @@ git clone --depth=1 https://github.com/garypang13/smartdns-le package/smartdns-l
 
 sed -i "/exit 0/i\chmod +x /etc/webweb.sh && source /etc/webweb.sh" $ZZZ
 
-
-if [[ "${Modelfile}" == "Lede_source" ]]; then
+if [[ ! "${Modelfile}" == "Openwrt_amlogic" ]]; then
 	sed -i '/IMAGES_GZIP/d' "${PATH1}/${CONFIG_FILE}" > /dev/null 2>&1
 	echo -e "\nCONFIG_TARGET_IMAGES_GZIP=y" >> "${PATH1}/${CONFIG_FILE}"
 fi
@@ -72,6 +70,7 @@ fi
 ################################################################################################################
 Diy_lienol() {
 find . -name 'luci-app-netdata' -o -name 'netdata' -o -name 'luci-theme-argon' -o -name 'luci-app-fileassistant' | xargs -i rm -rf {}
+find . -name 'ddns-scripts_aliyun' -o -name 'ddns-scripts_dnspod' | xargs -i rm -rf {}
 rm -rf feeds/packages/libs/libcap
 
 git clone https://github.com/fw876/helloworld package/luci-app-ssr-plus
@@ -87,17 +86,16 @@ sed -i "/exit 0/i\chmod +x /etc/webweb.sh && source /etc/webweb.sh" $ZZZ
 Diy_mortal() {
 
 find . -name 'luci-app-argon-config' -o -name 'luci-theme-argon' -o -name 'luci-light' -o -name 'luci-app-fileassistant'  | xargs -i rm -rf {}
-find . -name 'luci-app-netdata' -o -name 'netdata' -o -name 'luci-theme-openwrt' | xargs -i rm -rf {}
+find . -name 'luci-app-netdata' -o -name 'netdata' -o -name 'luci-theme-openwrt' -o -name 'luci-app-cifs' | xargs -i rm -rf {}
 }
 
 ################################################################################################################
 # 全部作者源码公共diy.sh文件
 ################################################################################################################
 Diy_all() {
-git clone --depth 1 -b "${REPO_BRANCH}" https://github.com/281677160/openwrt-package
+git clone --depth 1 -b "${REPO_BRANCH}" https://github.com/MCydia/openwrt-package
 cp -Rf openwrt-package/* "${Home}" && rm -rf "${Home}"/openwrt-package
 
-# 此处为控制后台自动更新固件，如需需要此功能请自行修改“false”为"true" 默认我关闭此功能。
 if [[ ${REGULAR_UPDATE} == "true" ]]; then
 	git clone https://github.com/281677160/luci-app-autoupdate feeds/luci/applications/luci-app-autoupdate
 	cp -Rf "${PATH1}"/{AutoUpdate.sh,replace.sh} package/base-files/files/bin
@@ -127,14 +125,22 @@ fi
 if [ -n "$(ls -A "${PATH1}/patches" 2>/dev/null)" ]; then
 	find "${PATH1}/patches" -type f -name '*.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 --forward --no-backup-if-mismatch"
 fi
+if [[ "${REPO_BRANCH}" == "master" ]]; then
+	sed -i 's/distversion)%>/distversion)%><!--/g' package/lean/autocore/files/*/index.htm
+	sed -i 's/luciversion)%>)/luciversion)%>)-->/g' package/lean/autocore/files/*/index.htm
+fi
+if [ -n "$(ls -A "feeds/luci/applications/luci-app-rebootschedule" 2>/dev/null)" ]; then
+	chmod -R 775 feeds/luci/applications/luci-app-rebootschedule
+fi
 }
 
 ################################################################################################################
 # s905x3_s905x2_s905x_s905d_s922x_s912 一键打包脚本
 ################################################################################################################
 Diy_amlogic() {
-svn co https://github.com/ophub/amlogic-s9xxx-openwrt/trunk/amlogic-s9xxx $GITHUB_WORKSPACE/amlogic-s9xxx > /dev/null 2>&1
-curl -fsSL https://raw.githubusercontent.com/ophub/amlogic-s9xxx-openwrt/main/make >$GITHUB_WORKSPACE/make
+git clone https://github.com/ophub/amlogic-s9xxx-openwrt
+mv amlogic-s9xxx-openwrt/{amlogic-s9xxx,make} $GITHUB_WORKSPACE
+rm -rf amlogic-s9xxx-openwrt
 source $GITHUB_WORKSPACE/amlogic_openwrt
 if [[ ${amlogic_kernel} == "5.12.12_5.4.127" ]]; then
 	curl -fsSL https://raw.githubusercontent.com/ophub/amlogic-s9xxx-openwrt/main/.github/workflows/build-openwrt-lede.yml > open.yml
@@ -209,16 +215,6 @@ if [[ `grep -c "CONFIG_PACKAGE_luci-app-samba4=y" ${Home}/.config` -eq '1' ]]; t
 	fi
 	
 fi
-if [[ `grep -c "CONFIG_PACKAGE_luci-app-autotimeset=y" ${Home}/.config` -eq '1' ]]; then
-	if [[ `grep -c "CONFIG_PACKAGE_luci-app-autoreboot=y" ${Home}/.config` -eq '1' ]]; then
-		sed -i 's/CONFIG_PACKAGE_luci-app-autoreboot=y/# CONFIG_PACKAGE_luci-app-autoreboot is not set/g' ${Home}/.config
-		sed -i 's/CONFIG_PACKAGE_luci-i18n-autoreboot-zh-cn=y/# CONFIG_PACKAGE_luci-i18n-autoreboot-zh-cn=y is not set/g' ${Home}/.config
-		echo "TIME r \"您同时选择luci-app-autotimeset和luci-app-autoreboot，插件有冲突，相同功能插件只能二选一，已删除luci-app-autoreboot\"" >>CHONGTU
-		echo "TIME z \"\"" >>CHONGTU
-		echo "插件冲突信息\"" > ${Home}/Chajianlibiao
-	fi
-	
-fi
 if [[ `grep -c "CONFIG_PACKAGE_luci-theme-argon=y" ${Home}/.config` -eq '1' ]]; then
 	if [[ `grep -c "CONFIG_PACKAGE_luci-theme-argon_new=y" ${Home}/.config` -eq '1' ]]; then
 		sed -i 's/CONFIG_PACKAGE_luci-theme-argon_new=y/# CONFIG_PACKAGE_luci-theme-argon_new is not set/g' ${Home}/.config
@@ -237,6 +233,16 @@ if [[ `grep -c "CONFIG_PACKAGE_luci-app-sfe=y" ${Home}/.config` -eq '1' ]]; then
 		echo "TIME z \"\"" >>CHONGTU
 		echo "TIME b \"插件冲突信息\"" > ${Home}/Chajianlibiao
 	fi
+fi
+if [[ `grep -c "CONFIG_PACKAGE_luci-ssl=y" ${Home}/.config` -eq '1' ]]; then
+	if [[ `grep -c "CONFIG_PACKAGE_libustream-wolfssl=y" ${Home}/.config` -eq '1' ]]; then
+		sed -i 's/CONFIG_PACKAGE_luci-ssl=y/# CONFIG_PACKAGE_luci-ssl is not set/g' ${Home}/.config
+		sed -i 's/CONFIG_PACKAGE_libustream-wolfssl=y/CONFIG_PACKAGE_libustream-wolfssl=m/g' ${Home}/.config
+		echo "TIME r \"您选择了luci-ssl会自带libustream-wolfssl，会和libustream-openssl冲突导致编译错误，已删除luci-ssl\"" >>CHONGTU
+		echo "TIME z \"\"" >>CHONGTU
+		echo "TIME b \"插件冲突信息\"" > ${Home}/Chajianlibiao
+	fi
+
 fi
 if [[ `grep -c "CONFIG_PACKAGE_luci-i18n-qbittorrent-zh-cn=y" ${Home}/.config` -eq '0' ]]; then
 	sed -i 's/CONFIG_PACKAGE_luci-app-qbittorrent_static=y/# CONFIG_PACKAGE_luci-app-qbittorrent_static is not set/g' ${Home}/.config
@@ -275,53 +281,83 @@ fi
 # 为编译做最后处理
 ################################################################################################################
 Diy_chuli() {
-
-if [[ "${TARGET_PROFILE}" == "x86-64" ]]; then
+if [[ "${TARGET_BOARD}" == "x86" ]]; then
 	cp -Rf "${Home}"/build/common/Custom/DRM-I915 target/linux/x86/DRM-I915
 	for X in $(ls -1 target/linux/x86 | grep "config-"); do echo -e "\n$(cat target/linux/x86/DRM-I915)" >> target/linux/x86/${X}; done
 fi
-grep -i CONFIG_PACKAGE_luci-app .config | grep  -v \# > Plug-in
-grep -i CONFIG_PACKAGE_luci-theme .config | grep  -v \# >> Plug-in
-if [[ `grep -c "CONFIG_PACKAGE_luci-i18n-qbittorrent-zh-cn=y" ${Home}/.config` -eq '0' ]]; then
-	sed -i '/qbittorrent/d' Plug-in
+
+if [[ `grep -c "CONFIG_PACKAGE_ntfs-3g=y" ${Home}/.config` -eq '1' ]]; then
+	mkdir -p files/etc/hotplug.d/block && curl -fsSL  https://raw.githubusercontent.com/MCydia/openwrt-package/usb/block/10-mount > files/etc/hotplug.d/block/10-mount
 fi
-sed -i '/INCLUDE/d' Plug-in > /dev/null 2>&1
-sed -i 's/CONFIG_PACKAGE_/、/g' Plug-in
-sed -i 's/=y/\"/g' Plug-in
-awk '$0=NR$0' Plug-in > Plug-2
-awk '{print "	" $0}' Plug-2 > Plug-in
-sed -i "s/^/TIME g \"/g" Plug-in
-cat /proc/cpuinfo | grep name | cut -f2 -d: | uniq -c > CPU
-cat /proc/cpuinfo | grep "cpu cores" | uniq >> CPU
-sed -i 's|[[:space:]]||g; s|^.||' CPU && sed -i 's|CPU||g; s|pucores:||' CPU
-CPUNAME="$(awk 'NR==1' CPU)" && CPUCORES="$(awk 'NR==2' CPU)"
-rm -rf CPU
-find . -name 'LICENSE' -o -name 'README' -o -name 'README.md' | xargs -i rm -rf {}
+
+if [[ "${Modelfile}" == "Openwrt_amlogic" ]]; then
+	[[ -e $GITHUB_WORKSPACE/amlogic_openwrt ]] && source $GITHUB_WORKSPACE/amlogic_openwrt
+	[[ "${amlogic_kernel}" == "5.12.12_5.4.127" ]] && {
+		curl -fsSL https://raw.githubusercontent.com/ophub/amlogic-s9xxx-openwrt/main/.github/workflows/build-openwrt-lede.yml > open.yml
+		Make_ker="$(cat open.yml | grep ./make | cut -d "k" -f3 | sed s/[[:space:]]//g)"
+		TARGET_kernel="${Make_ker}"
+		TARGET_model="${amlogic_model}"
+	} || {
+		TARGET_kernel="${amlogic_kernel}"
+		TARGET_model="${amlogic_model}"
+	}
+fi
+
+if [[ `grep -c "CONFIG_ARCH=\"x86_64\"" ${Home}/.config` -eq '1' ]]; then
+	Arch="amd64"
+elif [[ `grep -c "CONFIG_ARCH=\"i386\"" ${Home}/.config` -eq '1' ]]; then
+	Arch="i386"
+elif [[ `grep -c "CONFIG_ARCH=\"aarch64\"" ${Home}/.config` -eq '1' ]]; then
+	Arch="arm64"
+fi
+if [[ `grep -c "CONFIG_ARCH=\"arm\"" ${Home}/.config` -eq '1' ]]; then
+	if [[ `grep -c "CONFIG_arm_v7=y" ${Home}/.config` -eq '1' ]]; then
+		Arch="armv7"
+	fi	
+fi
+if [[ "${Arch}" =~ (amd64|i386|armeb|armv7) ]]; then
+	downloader="curl -L -k --retry 2 --connect-timeout 20 -o"
+	latest_ver="$($downloader - https://api.github.com/repos/AdguardTeam/AdGuardHome/releases/latest 2>/dev/null|grep -E 'tag_name' |grep -E 'v[0-9.]+' -o 2>/dev/null)"
+	wget -q https://github.com/AdguardTeam/AdGuardHome/releases/download/${latest_ver}/AdGuardHome_linux_${Arch}.tar.gz
+	tar -zxvf AdGuardHome_linux_${Arch}.tar.gz -C ${Home}
+	mkdir -p files/usr/bin
+	mv -f AdGuardHome/AdGuardHome files/usr/bin
+	chmod 777 files/usr/bin/AdGuardHome
+	rm -rf {AdGuardHome_linux_${Arch}.tar.gz,AdGuardHome}
+fi
+
+if [[ "${BY_INFORMATION}" == "true" ]]; then
+	grep -i CONFIG_PACKAGE_luci-app .config | grep  -v \# > Plug-in
+	grep -i CONFIG_PACKAGE_luci-theme .config | grep  -v \# >> Plug-in
+	if [[ `grep -c "CONFIG_PACKAGE_luci-i18n-qbittorrent-zh-cn=y" ${Home}/.config` -eq '0' ]]; then
+		if [[ `grep -c "luci-app-qbittorrent_static" ${Home}/Plug-in` -eq '1' ]]; then
+			sed -i '/qbittorrent/d' Plug-in
+		fi
+	fi
+	sed -i '/INCLUDE/d' Plug-in > /dev/null 2>&1
+	sed -i 's/CONFIG_PACKAGE_/、/g' Plug-in
+	sed -i 's/=y/\"/g' Plug-in
+	awk '$0=NR$0' Plug-in > Plug-2
+	awk '{print "	" $0}' Plug-2 > Plug-in
+	sed -i "s/^/TIME g \"/g" Plug-in
+	cat /proc/cpuinfo | grep name | cut -f2 -d: | uniq -c > CPU
+	cat /proc/cpuinfo | grep "cpu cores" | uniq >> CPU
+	sed -i 's|[[:space:]]||g; s|^.||' CPU && sed -i 's|CPU||g; s|pucores:||' CPU
+	CPUNAME="$(awk 'NR==1' CPU)" && CPUCORES="$(awk 'NR==2' CPU)"
+	rm -rf CPU
+	if [[ `grep -c "KERNEL_PATCHVER:=" ${Home}/target/linux/${TARGET_BOARD}/Makefile` -eq '1' ]]; then
+		PATCHVER=$(grep KERNEL_PATCHVER:= ${Home}/target/linux/${TARGET_BOARD}/Makefile | cut -c18-100)
+	elif [[ `grep -c "KERNEL_PATCHVER=" ${Home}/target/linux/${TARGET_BOARD}/Makefile` -eq '1' ]]; then
+		PATCHVER=$(grep KERNEL_PATCHVER= ${Home}/target/linux/${TARGET_BOARD}/Makefile | cut -c17-100)
+	else
+		PATCHVER="unknown"
+	fi
+	if [[ ! "${PATCHVER}" == "unknown" ]]; then
+		PATCHVER=$(egrep -o "${PATCHVER}.[0-9]+" ${Home}/include/kernel-version.mk)
+	fi
+fi
+find . -name 'README' -o -name 'README.md' | xargs -i rm -rf {}
 find . -name 'CONTRIBUTED.md' -o -name 'README_EN.md' -o -name 'DEVICE_NAME' | xargs -i rm -rf {}
-if [[ `grep -c "KERNEL_PATCHVER:=" ${Home}/target/linux/${TARGET_BOARD}/Makefile` -eq '1' ]]; then
-	PATCHVER=$(grep KERNEL_PATCHVER:= ${Home}/target/linux/${TARGET_BOARD}/Makefile | cut -c18-100)
-elif [[ `grep -c "KERNEL_PATCHVER=" ${Home}/target/linux/${TARGET_BOARD}/Makefile` -eq '1' ]]; then
-	PATCHVER=$(grep KERNEL_PATCHVER= ${Home}/target/linux/${TARGET_BOARD}/Makefile | cut -c17-100)
-else
-	PATCHVER=unknown
-fi
-if [[ "${PATCHVER}" != "unknown" ]]; then
-	PATCHVER=$(egrep -o "${PATCHVER}.[0-9]+" ${Home}/include/kernel-version.mk)
-fi
-if [[ "${REPO_BRANCH}" == "master" ]]; then
-	sed -i 's/distversion)%>/distversion)%><!--/g' package/lean/autocore/files/*/index.htm
-	sed -i 's/luciversion)%>)/luciversion)%>)-->/g' package/lean/autocore/files/*/index.htm
-fi
-[[ -e $GITHUB_WORKSPACE/amlogic_openwrt ]] && source $GITHUB_WORKSPACE/amlogic_openwrt
-[[ "${amlogic_kernel}" == "5.12.12_5.4.127" ]] && {
-	curl -fsSL https://raw.githubusercontent.com/ophub/amlogic-s9xxx-openwrt/main/.github/workflows/build-openwrt-lede.yml > open.yml
-	Make_ker="$(cat open.yml | grep ./make | cut -d "k" -f3 | sed s/[[:space:]]//g)"
-	TARGET_kernel="${Make_ker}"
-	TARGET_model="${amlogic_model}"
-} || {
-	TARGET_kernel="${amlogic_kernel}"
-	TARGET_model="${amlogic_model}"
-}
 }
 
 ################################################################################################################
@@ -343,33 +379,26 @@ GONGGAO() {
 }
 
 Diy_gonggao() {
-GONGGAO z "《Lede_source文件，Luci版本为18.06，内核版本为5.10》"
-GONGGAO y "《Lienol_source文件，Luci版本为19.07，内核版本为4.14》"
-GONGGAO g "《Mortal_source文件，Luci版本为21.02，内核版本为5.4》"
-GONGGAO z "《openwrt_amlogic文件，编译N1和晶晨系列盒子专用，Luci版本为18.06，内核版本为5.4》"
+GONGGAO y "《Lede_source文件，Luci版本为18.06，内核版本为5.4》"
+GONGGAO y "《Lienol_source文件，Luci版本为17.01，内核版本为4.14》"
+GONGGAO y "《Mortal_source文件，Luci版本为21.02，内核版本为5.4》"
+GONGGAO y "《Openwrt_amlogic文件，编译N1和晶晨系列盒子专用，Luci版本为18.06，内核版本为5.4》"
 GONGGAO g "第一次用我仓库的，请不要拉取任何插件，先SSH进入固件配置那里看过我脚本实在是没有你要的插件才再拉取"
 GONGGAO g "拉取插件应该单独拉取某一个你需要的插件，别一下子就拉取别人一个插件包，这样容易增加编译失败概率"
 GONGGAO r "《如果编译脚本在这里就出现错误的话，意思就是不得不更新脚本了，怎么更新我会在这里写明》"
-GONGGAO y "7月11号修复定时更新不保存改过的IP、DNS、DHCP的问题，修复不保存adguardhome配置文件问题"
-GONGGAO g "7月12号把luci-app-ddnsto插件,重新加入插件包"
-GONGGAO g "7月12号修复LEDE源码不选择qbittorrent都会显示带有这个插件的问题"
-GONGGAO g "LEDE源码默认是带两套qbittorrent插件的，一套完整版，一套精简版"
-GONGGAO g "精简版不管你选择没选择qbittorrentd都会默认编译进固件的，就是在页面不显示而已"
-GONGGAO g "我写了个判断，如果不选择qbittorrentd就把相关的默认选项都去除了"
-GONGGAO g "重新改了一下定时更新插件的MD5对比方式,有用定时更新插件的更新仓库后重新编译的固件自己手动安装一次,以后才会对比MD5成功,要不然一直对比失败的"
+GONGGAO y "把上传.config配置文件修改了一下，现在编译错误都会上传一个配置文件的，免得你辛辛苦苦弄的又要重新再弄"
+GONGGAO y "不过这样上传的.config也是双面的，如果你是因为.config编译错误，你不能直接套进去又继续编译，要看编译错误是什么，再进SSH把配置弄好"
+GONGGAO g "修复定时更新需要依赖翻墙才能完成，现在最新V6.5版，不需要翻墙也可以使用了"
 echo
 echo
 }
 
 Diy_tongzhi() {
-GONGGAO r "7月12号修复LEDE源码不选择qbittorrent都会显示带有这个插件的问题"
-GONGGAO r "LEDE源码默认是带两套qbittorrent插件的，一套完整版，一套精简版"
-GONGGAO r "精简版不管你选择没选择qbittorrentd都会默认编译进固件的，就是在页面不显示而已"
-GONGGAO r "我写了个判断，如果不选择qbittorrentd就把相关的默认选项都去除了"
-GONGGAO y "重新改了一下定时更新插件的MD5对比方式,有用定时更新插件的更新仓库后重新编译的固件自己手动安装一次,以后才会对比MD5成功,要不然一直对比失败的"
-GONGGAO y "手动安装的意思就是编译好固件后，下载出来，然后在openwrt后台自己更新一次不保存配置的更新"
-GONGGAO y "最近更新的比较频繁，希望大家理解，谢谢！"
-GONGGAO g "这一次更新，你们只要复制我仓库的build-openwrt.yml内容覆盖到你仓库的build-openwrt.yml上就可以了，麻烦大家了！"
+GONGGAO r "8月9号，请重新拉取仓库，麻烦各位了，也感谢各位的支持"
+GONGGAO r "修复因上游发布代码仓库错误，导致不能发布定时更新固件"
+GONGGAO r "修复定时更新需要依赖翻墙才能完成，现在最新V6.5版，不需要翻墙也可以使用了"
+GONGGAO r "把上传.config配置文件修改了一下，现在编译错误都会上传一个配置文件的，免得你辛辛苦苦弄的又要重新再弄"
+GONGGAO r "不过这样上传的.config也是双面的，如果你是因为.config编译错误，你不能直接套进去又继续编译，要看编译错误是什么，再进SSH把配置弄好"
 echo
 echo
 exit 1
@@ -390,7 +419,7 @@ TIME b "源码分支: ${REPO_BRANCH}"
 TIME b "源码作者: ${ZUOZHE}"
 TIME b "默认内核: ${PATCHVER}"
 TIME b "Luci版本: ${OpenWrt_name}"
-[[ "${Modelfile}" == "openwrt_amlogic" ]] && {
+[[ "${Modelfile}" == "Openwrt_amlogic" ]] && {
 	TIME b "编译机型: ${TARGET_model}"
 	TIME b "打包内核: ${TARGET_kernel}"
 } || {
@@ -400,7 +429,7 @@ TIME b "固件作者: ${Author}"
 TIME b "仓库地址: ${Github}"
 TIME b "启动编号: #${Run_number}（${CangKu}仓库第${Run_number}次启动[${Run_workflow}]工作流程）"
 TIME b "编译时间: ${Compte}"
-[[ "${Modelfile}" == "openwrt_amlogic" ]] && {
+[[ "${Modelfile}" == "Openwrt_amlogic" ]] && {
 	TIME g "友情提示：您当前使用【${Modelfile}】文件夹编译【${TARGET_model}】固件"
 } || {
 	TIME g "友情提示：您当前使用【${Modelfile}】文件夹编译【${TARGET_PROFILE}】固件"
@@ -469,7 +498,9 @@ if [[ ${REGULAR_UPDATE} == "true" ]]; then
 	TIME b "云端路径: ${Github_UP_RELEASE}"
 	TIME g "《编译成功，会自动把固件发布到指定地址，然后才会生成云端路径》"
 	TIME g "《普通的那个发布固件跟云端的发布路径是两码事，如果你不需要普通发布的可以不用打开发布功能》"
-	TIME g "《请把“REPO_TOKEN”密匙设置好,没设置好密匙不能发布就生成不了云端地址》"
+	TIME g "《请把“REPO_TOKEN”密匙设置好,没设置好密匙运行到 “把定时更新固件发布到云端” 步骤就会出错,生成不了云端地址》"
+	TIME g "《设置密匙教程： https://github.com/MCydia/OpenWrt/blob/main/README.md 》"
+	TIME y "《2021年8月9号修复定时更新需要依赖翻墙才能完成，现在最新V6.5版，不需要翻墙也可以使用了》"
 	echo
 else
 	echo
@@ -479,15 +510,6 @@ TIME z " 系统空间      类型   总数  已用  可用 使用率"
 cd ../ && df -hT $PWD && cd openwrt
 echo
 echo
-TIME z "  本服务器的CPU型号为[ ${CPUNAME} ]"
-echo
-TIME z "  在此系统上使用核心数为[ ${CPUCORES} ],线程数为[ $(nproc) ]"
-echo
-TIME z "  经过几次测试,随机分配到E5系列CPU编译是最慢的,8171M的CPU快很多，8272CL的又比8171M快一丢丢！"
-echo
-TIME z "  如果你编译的插件较多，而你又分配到E5系列CPU的话，你可以考虑关闭了重新再来的！"
-echo
-TIME z "  下面将使用[ $(nproc)线程 ]编译固件"
 if [ -n "$(ls -A "${Home}/EXT4" 2>/dev/null)" ]; then
 	echo
 	echo
