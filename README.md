@@ -43,6 +43,10 @@
 
  -  自动每7天更新一次，手动不定时更新
 
- -  ip：192.168.1.3 密码：为空
+ -  ip：10.10.10.251 密码：为空
+## 其他
 
+AdGuardHome更新核心的时候如果遇见‘A task is already running.’这个显示的话，请用命令来更新核心，
+op自带的ttyd或者用putty连接OP都可以，用了命令后会一直使用命令到更新到核心为止的，一般情况都能更新到核心。
 
+ 命令是：while ! bash /usr/share/AdGuardHome/update_core.sh ; do sleep 2 ; done ; echo succeed
