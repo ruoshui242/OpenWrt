@@ -5,11 +5,11 @@
 #
 
 cat >$NETIP <<-EOF
-uci set network.lan.ipaddr='192.168.1.3'                                   # IPv4 地址(openwrt后台地址)
+uci set network.lan.ipaddr='10.10.10.251'                                   # IPv4 地址(openwrt后台地址)
 uci set network.lan.netmask='255.255.255.0'                                 # IPv4 子网掩码
-uci set network.lan.gateway='192.168.1.4'                                  # IPv4 网关
-uci set network.lan.broadcast=''                                # IPv4 广播
-uci set network.lan.dns=''                                      # DNS(多个DNS要用空格分开)
+uci set network.lan.gateway='10.10.10.250'                                  # IPv4 网关
+uci set network.lan.broadcast='10.10.10.255'                                # IPv4 广播
+uci set network.lan.dns='10.10.10.253'                                      # DNS(多个DNS要用空格分开)
 uci set network.lan.delegate='0'                                            # 去掉LAN口使用内置的 IPv6 管理
 uci commit network                                                          # 不要删除跟注释,除非上面全部删除或注释掉了
 uci set dhcp.lan.ignore='1'                                                 # 关闭DHCP功能
@@ -32,6 +32,12 @@ sed -i 's/luci-theme-bootstrap/luci-theme-opentomcat/g' feeds/luci/collections/l
 # 设置密码为空（安装固件时无需密码登陆，然后自己修改想要的密码）
 sed -i '/CYXluq4wUazHjmCDBCqXF/d' $ZZZ
 
+# 删除默认防火墙
+sed -i '/to-ports 53/d' $ZZZ_PATH
+
+# 取消路由器每天跑分任务
+sed -i "/exit 0/i\sed -i '/coremark/d' /etc/crontabs/root" "$BASE_PATH/etc/rc.local"
+
 # 修改内核版本为5.4
 #sed -i 's/KERNEL_PATCHVER:=5.10/KERNEL_PATCHVER:=5.4/g' target/linux/x86/Makefile                        
 
@@ -40,6 +46,10 @@ sed -i '/CYXluq4wUazHjmCDBCqXF/d' $ZZZ
 
 # K3专用，编译K3的时候只会出K3固件
 #sed -i 's|^TARGET_|# TARGET_|g; s|# TARGET_DEVICES += phicomm_k3|TARGET_DEVICES += phicomm_k3|' target/linux/bcm53xx/image/Makefile
+
+# 在线更新时，删除不想保留固件的某个文件，在EOF跟EOF之间加入删除代码，记住这里对应的是固件的文件路径，比如： rm /etc/config/luci
+cat >$DELETE <<-EOF
+EOF
 
 # 修改插件名字
 sed -i 's/"BaiduPCS Web"/"百度网盘"/g' package/lean/luci-app-baidupcs-web/luasrc/controller/baidupcs-web.lua
@@ -63,12 +73,9 @@ sed -i 's/"解锁网易云灰色歌曲"/"NetEase music"/g' package/lean/luci-app
 sed -i 's/"Frp 内网穿透"/"Frp Intranet"/g' package/lean/luci-app-frpc/po/zh-cn/frp.po
 sed -i 's/"Argon 主题设置"/"Argon Settings"/g' feeds/luci/applications/luci-app-argon-config/po/zh-cn/argon-config.po
 
-# 在线更新时，删除不想保留固件的某个文件，在EOF跟EOF之间加入删除代码，记住这里对应的是固件的文件路径，比如： rm /etc/config/luci
-cat >$DELETE <<-EOF
-EOF
-
-# 整理固件包时候,删除您不想要的固件或者文件,让它不需要上传到Actions空间
+# 整理固件包时候,删除您不想要的固件或者文件,让它不需要上传到Actions空间（根据编译机型变化,自行调整需要删除的固件名称）
 cat >${GITHUB_WORKSPACE}/Clear <<-EOF
+rm -rf packages
 rm -rf config.buildinfo
 rm -rf feeds.buildinfo
 rm -rf openwrt-x86-64-generic-kernel.bin
